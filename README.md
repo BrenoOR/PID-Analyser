@@ -7,7 +7,7 @@ This repo was developed in order to read logs from [Armorial-Suassuna](https://g
 
 ### <a name="Installation"></a> Installation:
 
-- `pip install -r requirements.txt`
+- `cd src && pip install -r requirements.txt`
 
 ### Usage:
 
