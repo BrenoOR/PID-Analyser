@@ -20,3 +20,14 @@ This repo was developed in order to read logs from [Armorial-Suassuna](https://g
 1. `conda create --name PID-Analyser python=3.10`, then `y` when asked.
 2. `conda activate PID-Analyser`
 3. Then proceed to *[Installation](#Installation)*
+
+### About logs:
+
+I used the c++ builtin `std::freopen` to write a log file direct to the `/log`folder, catching everything printed
+in terminal (with stdout or other printer lib).
+I also used the [spdlog](https://github.com/gabime/spdlog) lib to print the test results, such as robot Acceleration
+or Velocity. This lib is quite useful because of its timestamp.
+
+The log pattern is the next string:
+
+PID Test - Player: (*robot_position_x*, *robot_position_y*); Vel: *robot_vel* Acceleration: *robot_acc*
