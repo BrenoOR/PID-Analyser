@@ -1,0 +1,9 @@
+#PyCharm config files
+.idea
+
+#Custom directories
+/Complete
+/Vx
+
+*.txt
+*.png
