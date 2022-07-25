@@ -22,9 +22,18 @@ import os
 
 
 class Reader:
+    def resolve_path(filepath):
+        folder = filepath.split("/")[0]
+        name = filepath.split("/")[1]
+        return folder, name
+
     def read(filepath):
-        file = open(filepath)
-        lines = file.readlines()
+        lines = []
+        folder, name = Reader.resolve_path(filepath)
+        if name in os.listdir(folder):
+            file = open(filepath)
+            lines = file.readlines()
+
         print("File opened. {} lines had been read.".format(len(lines)))
         return lines
 
@@ -32,21 +41,12 @@ class Reader:
         print("Start processing: {}.".format(filepath))
         lines = Reader.read(filepath)
         pid_log = []
-        print("Reading current PID constants")
-        constants = Reader.get_pid_constants()
+        constants = []
         for line in lines:
             if "PID Test" in line:
                 pid_log.append(line)
+            elif "Constants used" in line:
+                constants.append(line)
 
         print("From {} lines, got {} of PID Test".format(len(lines), len(pid_log)))
         return [constants, pid_log]
-
-    @staticmethod
-    def get_pid_constants():
-        file = open('../Armorial-Suassuna/src/constants/constants.json')
-        suassuna_constants = json.load(file)
-        pid_constants = []
-        for const in suassuna_constants['playerLinearPID']:
-            pid_constants.append(const)
-
-        return pid_constants

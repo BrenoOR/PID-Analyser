@@ -22,6 +22,7 @@
 # future, recommend new constants for PID improvement.
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 
@@ -29,6 +30,26 @@ from src.logReader import Reader
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--file", help="File path")
+ds = {
+    'P': [],
+    'I': [],
+    'D': [],
+    'RampRate': [],
+    'SetPointRange': [],
+    'Timestamp': [],
+    'PlayerSpd': [],
+    'PlayerAcc': []
+}
+
+def add_to_ds(config):
+    ds['P'].append(config['P'])
+    ds['I'].append(config['I'])
+    ds['D'].append(config['D'])
+    ds['RampRate'].append(config['RampRate'])
+    ds['SetPointRange'].append(config['SetPointRange'])
+    ds['Timestamp'].append(config['Timestamp'])
+    ds['PlayerSpd'].append(config['PlayerSpd'])
+    ds['PlayerAcc'].append(config['PlayerAcc'])
 
 
 def config_data(data_log):
@@ -42,17 +63,34 @@ def config_data(data_log):
 
     words = data_log.split(" ")
     data_instant["timestamp"] = words[1].replace(']', '')
-    data_instant["playerX"] = words[7].translate({ord(i): None for i in '(,'})
-    data_instant["playerY"] = words[8].translate({ord(i): None for i in ');'})
+    data_instant["playerX"] = words[7].translate({ord(w): None for w in '(,'})
+    data_instant["playerY"] = words[8].translate({ord(w): None for w in ');'})
     data_instant["playerSpd"] = words[10]
     data_instant["playerAcc"] = words[12].replace('\n', '')
     return data_instant
 
 
+def config_constants(const):
+    const_list = {
+        "P": "",
+        "I": "",
+        "D": "",
+        "rampRate": "",
+        "setPointRange": ""
+    }
+    words = const.split(" ")
+    const_list["P"] = words[5].translate({ord(w): None for w in 'P:,'})
+    const_list["I"] = words[6].translate({ord(w): None for w in 'I:,'})
+    const_list["D"] = words[7].translate({ord(w): None for w in 'D:,'})
+    const_list["rampRate"] = words[8].translate({ord(w): None for w in 'Ramp:,'})
+    const_list["setPointRange"] = words[9].translate({ord(w): None for w in 'SetPoint:\n'})
+    return const_list
+
+
 def config_array(array):
     result = []
-    for i in array:
-        result.append(float(i))
+    for it in array:
+        result.append(float(it))
 
     return result
 
@@ -79,79 +117,114 @@ def setup_timestamp(tempo):
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
+    config = {
+        'P': '',
+        'I': '',
+        'D': '',
+        'RampRate': '',
+        'SetPointRange': '',
+        'Timestamp': [],
+        'PlayerSpd': [],
+        'PlayerAcc': []
+    }
 
-    filename = args.file
-    [constants, pid_log] = Reader.get_pid_log(filename)
-    data = []
-    player_x = []
-    player_spd = []
-    player_acc = []
-    timestamp = []
-    times = []
-    print("Organizing data")
-    print("Removing spaces and organizing data in sections")
-    for log in pid_log:
-        data.append(config_data(log))
+    #args = parser.parse_args()
+    for P in range(50):
+        for I in range(10):
+            for D in range(10):
+                for Ramp in [0, 1, 3]:
+                    for SetPoint in [0, 5, 10]:
+                        filename = "logs/suassuna_log_{0}_{1}_{2}_{3}_{4}.txt".format(P, I, D, Ramp, SetPoint)
+                        [constants, pid_log] = Reader.get_pid_log(filename)
+                        if len(constants) < 1:
+                            continue
 
-    for d in data:
-        player_x.append(d.get("playerX"))
-        player_spd.append(d.get("playerSpd"))
-        player_acc.append(d.get("playerAcc"))
-        timestamp.append(d.get("timestamp"))
+                        data = []
+                        player_x = []
+                        player_spd = []
+                        player_acc = []
+                        timestamp = []
+                        times = []
+                        print("Organizing data")
+                        print("Removing spaces and organizing data in sections")
+                        for log in pid_log:
+                            data.append(config_data(log))
 
-    for t in timestamp:
-        times.append(t.split(":"))
+                        for const_line in constants:
+                            constants = config_constants(const_line)
 
-    print("Transforming data to numbers")
-    player_x = config_array(player_x)
-    player_spd = config_array(player_spd)
-    player_acc = config_array(player_acc)
-    instants_tempo = setup_timestamp(times)
+                        for d in data:
+                            player_x.append(d.get("playerX"))
+                            player_spd.append(d.get("playerSpd"))
+                            player_acc.append(d.get("playerAcc"))
+                            timestamp.append(d.get("timestamp"))
 
-    min_spd = 1000
-    max_spd = -1
-    for s in player_spd:
-        if s <= min_spd:
-            min_spd = s
-        if s >= max_spd:
-            max_spd = s
+                        for t in timestamp:
+                            times.append(t.split(":"))
 
-    min_acc = 1000
-    max_acc = -1
-    for a in player_acc:
-        if a <= min_acc:
-            min_acc = a
-        if a >= max_acc:
-            max_acc = a
+                        print("Transforming data to numbers")
+                        player_x = config_array(player_x)
+                        player_spd = config_array(player_spd)
+                        player_acc = config_array(player_acc)
+                        instants_tempo = setup_timestamp(times)
 
-    x = np.array(player_x)
-    spd = np.array(player_spd)
-    acc = np.array(player_acc)
-    tmp = np.array(instants_tempo)
-    #print(x)
-    #print(spd)
-    filename = filename.split("/")[1]
+                        x = np.array(player_x)
+                        spd = np.array(player_spd)
+                        acc = np.array(player_acc)
+                        tmp = np.array(instants_tempo)
 
-    fig, ax = plt.subplots()
-    print("Plotting graphs")
-    ax.plot(tmp, spd, linewidth=2.0, label='Vx(t)\nP: {0}\nI: {1}\nD: {2}'.format(constants[0],
-                                                                                  constants[1],
-                                                                                  constants[2]))
+                        config['P'] = constants["P"]
+                        config['I'] = constants["I"]
+                        config['D'] = constants["D"]
+                        config['RampRate'] = constants["rampRate"]
+                        config['SetPointRange'] = constants["setPointRange"]
+                        config['Timestamp'] = instants_tempo
+                        config['PlayerSpd'] = player_spd
+                        config['PlayerAcc'] = player_acc
 
-    ax.set(xlim=(0, 11), xticks=np.arange(0, 11),
-           ylim=(0, 2), yticks=np.arange(0, 2))
+                        config['P'] = float(config['P'])
+                        config['I'] = float(config['I'])
+                        config['D'] = float(config['D'])
+                        config['RampRate'] = float(config['RampRate'])
+                        config['SetPointRange'] = float(config['SetPointRange'])
+                        add_to_ds(config)
 
-    plt.legend()
-    plt.savefig('results/' + filename.split(".")[0] + '_Vx', bbox_inches='tight')
+                        # print(x)
+                        # print(spd)
+                        filename = filename.split("/")[1]
 
-    ax.plot(tmp, acc, linewidth=2.0, label='Ax(t)\nP: {0}\nI: {1}\nD: {2}'.format(constants[0],
-                                                                                  constants[1],
-                                                                                  constants[2]))
+                        fig, ax = plt.subplots()
+                        print("Plotting graphs")
+                        ax.plot(tmp, spd, linewidth=2.0,
+                                label='Vx(t)\nP: {0}\nI: {1}\nD: {2}\n Ramp rate: {3}\n SetPointRange{4}'.format(
+                                    constants["P"],
+                                    constants["I"],
+                                    constants["D"],
+                                    constants["rampRate"],
+                                    constants["setPointRange"]
+                                ))
 
-    ax.set(xlim=(0, 11), xticks=np.arange(0, 11),
-           ylim=(-6, 6), yticks=np.arange(-6, 6))
+                        ax.set(xlim=(0, 11), xticks=np.arange(0, 11),
+                               ylim=(0, 2), yticks=np.arange(0, 2))
 
-    plt.legend()
-    plt.savefig('results/' + filename.split(".")[0], bbox_inches='tight')
-    plt.show()
+                        plt.legend()
+                        plt.savefig('graphs/Vx/' + filename.split(".")[0] + '_Vx', bbox_inches='tight')
+
+                        ax.plot(tmp, acc, linewidth=2.0,
+                                label='Ax(t)\nP: {0}\nI: {1}\nD: {2}\n Ramp rate: {3}\n SetPointRange{4}'.format(
+                                    constants["P"],
+                                    constants["I"],
+                                    constants["D"],
+                                    constants["rampRate"],
+                                    constants["setPointRange"]
+                                ))
+
+                        ax.set(xlim=(0, 11), xticks=np.arange(0, 11),
+                               ylim=(-6, 6), yticks=np.arange(-6, 6))
+
+                        plt.legend()
+                        plt.savefig('graphs/' + filename.split(".")[0], bbox_inches='tight')
+
+    df = pd.DataFrame(ds)
+    df.to_csv('dataset/grSim_data.csv')
+    #plt.show()
